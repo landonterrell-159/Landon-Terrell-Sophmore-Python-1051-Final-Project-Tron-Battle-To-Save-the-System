@@ -1,1 +1,27 @@
+script.Parent.MouseButton1Click:Connect(function()
+	script.Parent.Parent.Parent.Parent.Parent.TeamColor = BrickColor.new("Really blue")
+	script.Parent.Parent.Parent.Parent.Parent.Character.Humanoid.Health = 0
+end)
 
+script.Parent.MouseButton1Click:Connect(function()
+	script.Parent.Parent.Parent.Parent.Parent.TeamColor = BrickColor.new("Deep orange")
+	script.Parent.Parent.Parent.Parent.Parent.Character.Humanoid.Health = 0
+	
+end)
+
+script.Parent.MouseButton1Click:Connect(function()
+	script.Parent.Parent.Parent.Parent.Parent.TeamColor = BrickColor.new("White")
+	script.Parent.Parent.Parent.Parent.Parent.Character.Humanoid.Health = 0
+end)
+
+local open = false
+
+script.Parent.MouseButton1Click:Connect(function()
+	if open == false then
+		open = true
+		script.Parent.Parent.MainFrame:TweenPosition(UDim2.new(0.5,0,0.5,0), "InOut", "Quad", 0.5, true)
+	else
+		open = false
+		script.Parent.Parent.MainFrame:TweenPosition(UDim2.new(0.5,0,1.5,0), "InOut", "Quad", 0.5, true)
+	end
+end)
