@@ -1,0 +1,160 @@
+local Players = game:GetService("Players")
+local Teams = game:GetService("Teams")
+
+-- Team color settings
+local teamColors = {
+	["Orange"] = {
+		Color = Color3.fromRGB(255, 165, 0), -- Orange
+		BrickColor = BrickColor.new("Deep orange")
+	},
+	["Blue"] = {
+		Color = BrickColor.new("Toothpaste").Color, -- Cyan/Deep blue
+		BrickColor = BrickColor.new("Toothpaste")
+	}
+}
+
+-- Function to monitor a player and create deadly blocks behind them
+local function setupPlayerTrail(player)
+	player.CharacterAdded:Connect(function(character)
+		local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+		local humanoid = character:WaitForChild("Humanoid")
+
+		local lastPosition = nil
+		local trailFolder = Instance.new("Folder")
+		trailFolder.Name = player.Name .. "'s Trail"
+		trailFolder.Parent = workspace
+
+		-- Debounce table to prevent multiple kills
+		local debounce = {}
+
+		-- Function to get player's team color
+		local function getTeamColor()
+			if player.Team then
+				local teamName = player.Team.Name
+				if teamColors[teamName] then
+					return teamColors[teamName].Color
+				end
+			end
+			return nil -- No valid team
+		end
+
+		-- Function to check if player should have a trail
+		local function shouldHaveTrail()
+			if not player.Team then
+				return false
+			end
+			local teamName = player.Team.Name
+			-- Don't create trail for Lobby
+			if teamName == "Lobby" then
+				return false
+			end
+			-- Only create trail for Orange and Blue teams
+			return teamColors[teamName] ~= nil
+		end
+
+		-- Function to handle when someone touches a block
+		local function onBlockTouched(block, touchedPlayer)
+			return function(otherPart)
+				local otherCharacter = otherPart.Parent
+
+				-- Check if it's a character
+				if otherCharacter and otherCharacter:FindFirstChild("Humanoid") then
+					local otherHumanoid = otherCharacter:FindFirstChild("Humanoid")
+
+					-- Don't kill yourself
+					if otherCharacter == character then
+						return
+					end
+
+					-- Don't kill teammates
+					local otherPlayer = Players:GetPlayerFromCharacter(otherCharacter)
+					if otherPlayer and otherPlayer.Team == player.Team then
+						return
+					end
+
+					-- Debounce check
+					if debounce[otherCharacter] then
+						return
+					end
+					debounce[otherCharacter] = true
+
+					print(player.Name .. "'s trail killed " .. otherCharacter.Name)
+
+					-- Kill the other player
+					if otherHumanoid and otherHumanoid.Health > 0 then
+						otherHumanoid.Health = 0
+					end
+
+					-- Clear debounce
+					task.delay(1, function()
+						debounce[otherCharacter] = nil
+					end)
+				end
+			end
+		end
+
+		-- Main loop to create blocks
+		task.spawn(function()
+			while character and character.Parent and humanoid.Health > 0 do
+				-- Check if player should have a trail
+				if shouldHaveTrail() then
+					local currentPosition = humanoidRootPart.Position
+					local trailColor = getTeamColor()
+
+					if lastPosition and trailColor then
+						local distance = (currentPosition - lastPosition).Magnitude
+
+						-- Only create if moved enough
+						if distance > 2 then
+							-- Create wall segment
+							local wall = Instance.new("Part")
+							wall.Name = "TrailWall"
+							wall.Size = Vector3.new(1, 10, distance)
+							wall.CFrame = CFrame.new((currentPosition + lastPosition) / 2, currentPosition)
+							wall.Anchored = true
+							wall.CanCollide = true
+							wall.Material = Enum.Material.Neon
+							wall.Color = trailColor
+							wall.Transparency = 0.3
+							wall.Parent = trailFolder
+
+							-- Add touch event to kill others
+							wall.Touched:Connect(onBlockTouched(wall, player))
+
+							-- Auto-delete after 30 seconds
+							game:GetService("Debris"):AddItem(wall, 5)
+						end
+					end
+
+					lastPosition = currentPosition
+				else
+					-- Reset last position if not on a valid team
+					lastPosition = nil
+				end
+
+				task.wait(0.1)
+			end
+
+			-- Clean up trail when player dies or leaves
+			task.wait(.5)
+			trailFolder:Destroy()
+		end)
+
+		-- Monitor team changes
+		player:GetPropertyChangedSignal("Team"):Connect(function()
+			-- Clear trail when team changes
+			if not shouldHaveTrail() then
+				trailFolder:ClearAllChildren()
+				lastPosition = nil
+			end
+		end)
+	end)
+end
+
+-- Set up for all players
+Players.PlayerAdded:Connect(setupPlayerTrail)
+
+-- Set up for existing players
+for _, player in ipairs(Players:GetPlayers()) do
+	setupPlayerTrail(player)
+end
