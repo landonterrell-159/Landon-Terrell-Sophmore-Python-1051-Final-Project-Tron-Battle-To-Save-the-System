@@ -1,0 +1,12 @@
+local KillBrick = script.Parent
+
+KillBrick.Touched:Connect(function(touchPart)
+
+	task.wait(math.random(1,10))
+
+	local humanoid = touchPart.Parent:FindFirstChild("Humanoid")
+
+	if humanoid then
+		humanoid.Health = 0
+	end
+end)
