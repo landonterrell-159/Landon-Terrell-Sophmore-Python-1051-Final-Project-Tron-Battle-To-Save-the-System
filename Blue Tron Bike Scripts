@@ -1,0 +1,115 @@
+-- Handler to Enter Bike 
+
+local sP = script.Parent
+local seat = sP.Parent
+
+seat:GetPropertyChangedSignal("Occupant"):Connect(function()
+	if(seat.Occupant) then
+		sP.Enabled = false;
+	else
+		sP.Enabled = true;
+	end
+end)
+
+sP.Triggered:Connect(function(plr)
+	seat:Sit(plr.Character.Humanoid);
+end)
+
+-- Handler Main
+
+local configs = script.Parent.Parent:FindFirstChild("Configuration");
+local forwardSpeed = configs.TopSpeed.Value;
+local turnSpeed = configs.TurnSpeed.Value;
+
+local Seat = script.Parent;
+
+--Movement
+local hover = coroutine.create(function()
+	while wait() do
+		if(script.Parent.Throttle == 0) then
+			script.Parent.Move.Velocity = Vector3.new(0,0,0);
+		elseif(script.Parent.Throttle == 1) then
+			script.Parent.Move.Velocity = script.Parent.CFrame.LookVector * (forwardSpeed);
+		elseif(script.Parent.Throttle == -1) then
+			script.Parent.Move.Velocity = script.Parent.CFrame.LookVector * -(forwardSpeed / 2);
+		end
+		if(script.Parent.Steer == 0) then
+			script.Parent.Turn.AngularVelocity = Vector3.new(0,0,0);
+		elseif(script.Parent.Steer == 1) then
+			script.Parent.Turn.AngularVelocity = Vector3.new(0,-(math.abs(turnSpeed / 15)),0);
+		elseif(script.Parent.Steer == -1) then
+			script.Parent.Turn.AngularVelocity = Vector3.new(0,(math.abs(turnSpeed / 15)),0);
+		end
+	end
+end)
+coroutine.resume(hover);
+--Movement
+
+--Animation
+local function Added(a)
+	if(a.className == "Weld") then
+		local human = a.part1.Parent:FindFirstChild("Humanoid");
+		if(human ~= nil) then
+			anim = human:LoadAnimation(Seat.sitanim);
+			anim:Play();
+		end
+	end
+end
+
+local function Removed(a2)
+	if(anim ~= nil) then
+		anim:Stop();
+		anim:Remove();
+	end
+end
+Seat.ChildAdded:Connect(Added);
+Seat.ChildRemoved:Connect(Removed);
+--Animation
+
+
+--Balance The Player Upright
+local uprightCF = script.Parent.CFrame;
+
+local fg = Instance.new("BodyGyro");
+
+fg.MaxTorque = Vector3.new(1000,math.abs(workspace.Gravity),1000);
+fg.CFrame = uprightCF;
+fg.Parent = script.Parent;
+
+while true do
+	fg.cframe = uprightCF;
+	wait(100);
+end 
+
+--Neon Trail
+local partsToColor = {script.Parent, script.Parent.Parent.BackLight};
+
+local function Check()
+	return script.Parent.Parent:FindFirstChild("Configuration").Neon.Value;
+end
+
+local function Chroma()
+	local t = 1
+
+	local hue = tick() % t / t
+	local color = Color3.fromHSV(hue,1,1)
+	for _,v in ipairs(partsToColor) do
+		v.Color = color;
+	end
+end
+
+local Run = coroutine.create(function()
+	while wait() do
+		local tof = Check();
+		if(tof) then
+			Chroma();
+		elseif(script.Parent.BrickColor ~= BrickColor.new("Toothpaste") and not tof) then
+			for _,v in ipairs(partsToColor) do
+				script.Parent.BrickColor = BrickColor.new("Toothpaste");
+			end
+		end
+	end
+end)
+
+coroutine.resume(Run);
+
